@@ -27,6 +27,7 @@ import org.springframework.web.bind.annotation.RestController;
 import com.wata.payslip.employeeDTO.AuthenticationResponse;
 import com.wata.payslip.employeeDTO.EmployeeDTO;
 import com.wata.payslip.employeeDTO.MyUserDetails;
+import com.wata.payslip.employeeDTO.SearchData;
 import com.wata.payslip.filter.JwtUtil;
 import com.wata.payslip.service.Mapservice;
 import com.wata.payslip.service.MyUserDetailsService;
@@ -117,4 +118,9 @@ public class GreetingController {
 		return ("<h1>Welcome Admin</h1>");
 	}
 
+	@RequestMapping(value = "/employee/pages", headers = "Accept=application/json", method = RequestMethod.POST)
+	public ResponseEntity<Map<String, Object>> searchEmployeeByFullName(@RequestBody SearchData searchData) {
+		// default currentPage = 0, pageSize = 3
+		return mapService.searchEmployeeByFullName(searchData);
+	}
 }

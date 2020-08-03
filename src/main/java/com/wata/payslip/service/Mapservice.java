@@ -1,5 +1,7 @@
 package com.wata.payslip.service;
 
+import java.sql.Date;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -11,6 +13,10 @@ import javax.management.relation.RelationNotFoundException;
 
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.mail.SimpleMailMessage;
@@ -18,6 +24,7 @@ import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.stereotype.Service;
 
 import com.wata.payslip.employeeDTO.EmployeeDTO;
+import com.wata.payslip.employeeDTO.SearchData;
 import com.wata.payslip.model.EmployeeAccount;
 import com.wata.payslip.model.EmployeeEntity;
 import com.wata.payslip.repository.AuthRepository;
@@ -158,5 +165,110 @@ public class Mapservice {
 	public String getRandomNumberInts(int min, int max) {
 		Random random = new Random();
 		return Long.toString(random.ints(min, (max + 1)).findFirst().getAsInt());
+	}
+
+	public List<EmployeeEntity> createSearchEmployee(EmployeeDTO employee) {
+		ArrayList<EmployeeEntity> result = new ArrayList<EmployeeEntity>();
+		ArrayList<EmployeeEntity> data = (ArrayList<EmployeeEntity>) employeeRepository.findAll();
+		ArrayList<EmployeeEntity> tmp = new ArrayList<EmployeeEntity>();
+
+		if (employee.getEmail() != null) {
+			result.clear();
+			for (EmployeeEntity employeeEntity : data) {
+				if (employeeEntity.getEmail() == employee.getEmail()) {
+					result.add(employeeEntity);
+					return result;
+				}
+			}
+		}
+
+		if (employee.getFullName() == null) {
+			employee.setFullName("");
+		}
+
+		if (employee.getTelephone() == null) {
+			employee.setTelephone("");
+		}
+
+		if (employee.getBirthday() == null) {
+			employee.setBirthday(new Date(0));
+		}
+
+		if (employee.getJoinDay() == null) {
+			employee.setJoinDay(new Date(0));
+		}
+
+//		for (EmployeeEntity employeeEntity : data) {
+//			if (employeeEntity.getFullName().toLowerCase().contains(employee.))
+//		}
+
+		return result;
+	}
+
+	public ResponseEntity<Map<String, Object>> searchEmployeeByFullName(SearchData searchData) {
+		String fullName = searchData.getSearchValue();
+		Integer currentPage, pageSize;
+		String sort = searchData.getSort();
+
+		if (searchData.getCurrentPage() != null) {
+			currentPage = searchData.getCurrentPage();
+		} else {
+			currentPage = 0;
+		}
+
+		if (searchData.getPageSize() != null) {
+			pageSize = searchData.getPageSize();
+		} else {
+			pageSize = 3;
+		}
+
+		try {
+			List<EmployeeEntity> employeeEntities = new ArrayList<EmployeeEntity>();
+			Pageable paging;
+
+			if (sort != null) {
+				switch (sort) {
+				case "ASC":
+					paging = PageRequest.of(currentPage, pageSize, Sort.by("fullName"));
+					break;
+				case "DESC":
+					paging = PageRequest.of(currentPage, pageSize, Sort.by("fullName").descending());
+					break;
+				default:
+					paging = PageRequest.of(currentPage, pageSize);
+					break;
+				}
+			} else {
+				paging = PageRequest.of(currentPage, pageSize);
+			}
+
+			Page<EmployeeEntity> pageTuts;
+			if (fullName == null) {
+				pageTuts = employeeRepository.findAll(paging);
+			} else {
+				pageTuts = employeeRepository.findByFullNameContaining(fullName.trim(), paging);
+			}
+
+			employeeEntities = pageTuts.getContent();
+
+			if (employeeEntities.isEmpty()) {
+				return new ResponseEntity<>(HttpStatus.NO_CONTENT);
+			}
+
+			Map<String, Object> response = new HashMap<>();
+			response.put("currentPage", pageTuts.getNumber());
+			response.put("totalItems", pageTuts.getTotalElements());
+			response.put("totalPages", pageTuts.getTotalPages());
+			response.put("employee", employeeEntities);
+
+			return new ResponseEntity<>(response, HttpStatus.OK);
+		} catch (Exception e) {
+			return new ResponseEntity<>(null, HttpStatus.INTERNAL_SERVER_ERROR);
+		}
+	}
+
+	public ArrayList<EmployeeEntity> findByFullName(String fullName) {
+		employeeRepository.findByName(fullName);
+		return employeeRepository.findByName(fullName);
 	}
 }
